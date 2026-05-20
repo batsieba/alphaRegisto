@@ -19,6 +19,7 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { useRouter } from "expo-router";
+import { NotificationBell } from "../../components/NotificationBell";
 
 export default function SalesDashboard() {
   const { user, companyId } = useAuth();
@@ -114,9 +115,11 @@ export default function SalesDashboard() {
       ListHeaderComponent={
         <>
         <View style={styles.header}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
             <Text style={styles.title}>Sales Dashboard</Text>
-
+          </View>
+          <NotificationBell />
         </View>
 
           <TextInput
@@ -262,7 +265,7 @@ const styles = StyleSheet.create({
   customerText: { fontWeight: "600" },
 
   customerSub: { color: "#6b7280", marginTop: 4 },
-  header: { flexDirection: "row", alignItems: "center", marginBottom: 12,marginTop: 20, backgroundColor: '#fff', borderRadius: 12,},
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, marginTop: 20, backgroundColor: '#fff', borderRadius: 12, paddingRight: 4 },
   logo: { width: 60, height: 60, marginRight: 12 , borderRadius: 12,},
   title: { fontSize: 22, fontWeight: "700" },
 });

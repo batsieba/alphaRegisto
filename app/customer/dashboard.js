@@ -4,6 +4,7 @@ import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
+import { NotificationBell } from "../../components/NotificationBell";
 
 
 export default function CustomerDashboard() {
@@ -120,15 +121,18 @@ export default function CustomerDashboard() {
 
       {/* HEADER */}
       <View style={styles.header}>
-        <Image
-          source={require("../../assets/logo.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <View>
-          <Text style={styles.title}>Dashboard</Text>
-          <Text style={styles.subtitle}>Your financial overview</Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Image
+            source={require("../../assets/logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <View>
+            <Text style={styles.title}>Dashboard</Text>
+            <Text style={styles.subtitle}>Your financial overview</Text>
+          </View>
         </View>
+        <NotificationBell />
       </View>
 
       {/* KPI GRID */}
@@ -214,6 +218,7 @@ padding:20
 header:{
 flexDirection:"row",
 alignItems:"center",
+justifyContent:"space-between",
 marginBottom:20,
 marginTop:10,
 },

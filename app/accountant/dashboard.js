@@ -12,6 +12,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "expo-router";
+import { NotificationBell } from "../../components/NotificationBell";
 
 export default function AccountantDashboard() {
   const { companyId } = useAuth();
@@ -104,8 +105,11 @@ export default function AccountantDashboard() {
     <ScrollView style={styles.container}>
 
         <View style={styles.header}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-            <Text style={styles.title} >Accountant Dashboard</Text>
+            <Text style={styles.title}>Accountant Dashboard</Text>
+          </View>
+          <NotificationBell />
         </View>
 
       <Text style={styles.headerTxt}>Company Overview</Text>
@@ -242,7 +246,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-  header: { flexDirection: "row", alignItems: "center", marginBottom: 12,marginTop: 20, backgroundColor: '#fff', borderRadius: 12,},
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, marginTop: 20, backgroundColor: '#fff', borderRadius: 12, paddingRight: 4 },
   logo: { width: 60, height: 60, marginRight: 12 , borderRadius: 12,},
   title: { fontSize: 22, fontWeight: "700" },
 });

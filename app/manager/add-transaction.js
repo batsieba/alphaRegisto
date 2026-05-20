@@ -185,31 +185,6 @@ export default function AddTransaction() {
         createdAt: serverTimestamp(),
       });
 
-      await setDoc(doc(collection(db, "notifications")), {
-        type: "transaction",
-        title: "New Transaction",
-        message: `Transaction ${form.title} - ${form.amount} ${form.currency}`,
-        
-        receivers: [
-          form.customerId,
-          user.uid, // sender
-        ],
-
-        companyId,
-        transactionId: tranRef.id,
-
-        channels: {
-          push: true,
-          email: true,
-          whatsapp: true,
-        },
-
-        status: "pending",
-
-        createdAt: serverTimestamp(),
-        read: false,
-      });
-
       Alert.alert("Success", "Transaction added");
 
       // RESET FORM

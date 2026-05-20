@@ -8,6 +8,7 @@ import {
   View,
   ActivityIndicator
 } from "react-native";
+import { NotificationBell } from "../../components/NotificationBell";
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../../config/firebase";
@@ -147,12 +148,15 @@ export default function ManagerDashboard() {
 
       {/* HEADER */}
       <View style={styles.header}>
-        <Image
-          source={require("../../assets/logo.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.title}>Manager Dashboard</Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Image
+            source={require("../../assets/logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>Manager Dashboard</Text>
+        </View>
+        <NotificationBell />
       </View>
 
       <Text style={styles.subtitle}>
@@ -231,6 +235,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 10,
   },
 

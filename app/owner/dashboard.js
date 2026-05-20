@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "expo-router";
+import { NotificationBell } from "../../components/NotificationBell";
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
  import { db } from "../../config/firebase";
@@ -137,12 +138,15 @@ const fetchDashboardData = async () => {
       
       {/* TOP BAR */}
       <View style={styles.topBar}>
-        <Image
-          source={require('../../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.title}>Owner Dashboard</Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>Owner Dashboard</Text>
+        </View>
+        <NotificationBell />
       </View>
 
       {/* COMPANY INFO */}
@@ -230,6 +234,7 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 16,
     marginTop: 10,
   },

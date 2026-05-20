@@ -11,11 +11,15 @@ import {
 } from "react-native";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { db } from "../../config/firebase";
+import { db, auth } from "../../config/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
+import { useRouter } from "expo-router";
+
 
 export default function ManagerProfile() {
   const { user, companyId } = useAuth();
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
