@@ -1,10 +1,19 @@
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
-// const nodemailer = require("nodemailer"); // email disabled for now
+const nodemailer = require("nodemailer");
 
 admin.initializeApp();
 
 const db = admin.firestore();
+
+/* ========= EMAIL CONFIG ========= */
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "infoalpharegisto@gmail.com",
+    pass: "idkynamucnqwcvhp",
+  },
+});
 
 /* ========= TRIGGER: new transaction created ========= */
 exports.onTransactionCreated = functions.firestore
@@ -100,24 +109,59 @@ exports.onTransactionCreated = functions.firestore
 
         await batch.commit();
 
-        /* ---- 4. Email (disabled — uncomment when ready) ----
-        const nodemailer = require("nodemailer");
-        const transporter = nodemailer.createTransport({
-          service: "gmail",
-          auth: {
-            user: "infoalpharegisto@gmail.com",
-            pass: "bgzapfefdffpjwue",
-          },
-        });
-        await Promise.all(
-          recipients.filter((r) => r.email).map((r) =>
-            transporter.sendMail({ ... }).catch((e) => console.error(e))
-          )
-        );
-        ---- end email ---- */
+        /* ---- 4. Send email to each recipient ---- */
+        const emailPromises = recipients
+            .filter((r) => r.email)
+            .map((r) => {
+              const isSubmitter = r.uid === tx.enteredBy;
+              const subject = isSubmitter ?
+                "Submission Confirmed: " + (tx.title || "Transaction") :
+                "New Transaction: " + (tx.title || "Transaction");
+              const bodyMsg = isSubmitter ?
+                "Your transaction has been recorded successfully." :
+                "A new transaction has been entered in your company.";
+              const htmlBody =
+                "<h2 style='color:#2563eb'>" + subject + "</h2>" +
+                "<p>" + bodyMsg + "</p>" +
+                "<table style='border-collapse:collapse;width:100%'>" +
+                "<tr><td style='padding:8px;border:1px solid #e5e7eb'>" +
+                "<b>Customer</b></td>" +
+                "<td style='padding:8px;border:1px solid #e5e7eb'>" +
+                (tx.customerName || "N/A") + "</td></tr>" +
+                "<tr><td style='padding:8px;border:1px solid #e5e7eb'>" +
+                "<b>Amount</b></td>" +
+                "<td style='padding:8px;border:1px solid #e5e7eb'>" +
+                (tx.currency || "USD") + " " +
+                (tx.amount || 0) + "</td></tr>" +
+                "<tr><td style='padding:8px;border:1px solid #e5e7eb'>" +
+                "<b>Payment Method</b></td>" +
+                "<td style='padding:8px;border:1px solid #e5e7eb'>" +
+                (tx.method || "N/A") + "</td></tr>" +
+                "<tr><td style='padding:8px;border:1px solid #e5e7eb'>" +
+                "<b>Transaction No</b></td>" +
+                "<td style='padding:8px;border:1px solid #e5e7eb'>" +
+                (tx.transactionNo || "N/A") + "</td></tr>" +
+                "</table>" +
+                "<p style='color:#6b7280;font-size:12px;margin-top:16px'>" +
+                "Alpha Registo — Transaction Management</p>";
+              return transporter
+                  .sendMail({
+                    from: "Alpha Registo <infoalpharegisto@gmail.com>",
+                    to: r.email,
+                    subject,
+                    html: htmlBody,
+                  })
+                  .catch((err) =>
+                    console.error(
+                        "Email failed for", r.email, ":", err.message,
+                    ),
+                  );
+            });
+
+        await Promise.all(emailPromises);
 
         console.log(
-            "Notifications created for " + recipients.length +
+            "Notifications + emails sent for " + recipients.length +
             " recipients on transaction " + transactionId,
         );
         return null;

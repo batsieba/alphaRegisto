@@ -61,6 +61,13 @@ export default function AccountantLayout() {
                     options={{
                         href: null,
                     }} />
+
+      <Tabs.Screen
+        name="transactionDetail"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

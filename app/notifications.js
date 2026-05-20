@@ -17,6 +17,8 @@ function getTransactionRoute(role, transactionId) {
   if (role === "manager") return `/manager/transactionDetail?id=${transactionId}`;
   if (role === "salesperson") return `/salesperson/transaction-details?id=${transactionId}`;
   if (role === "customer") return `/customer/transactionDetail?id=${transactionId}`;
+  if (role === "owner") return `/owner/transactionDetail?id=${transactionId}`;
+  if (role === "accountant") return `/accountant/transactionDetail?id=${transactionId}`;
   return null;
 }
 

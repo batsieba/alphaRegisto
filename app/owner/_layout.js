@@ -1,7 +1,6 @@
 //app/owner/_layout.js
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Redirect } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import { useEffect } from "react";
 
@@ -89,6 +88,12 @@ export default function OwnerLayout(){
 
                 <Tabs.Screen
                     name="employee-details"
+                    options={{
+                        href: null,
+                    }} />
+
+                <Tabs.Screen
+                    name="transactionDetail"
                     options={{
                         href: null,
                     }} />

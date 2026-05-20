@@ -7,11 +7,10 @@ import {
   Image,
   Pressable,
   Linking,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { doc, onSnapshot, deleteDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,7 +39,7 @@ const TYPE_COLORS = {
 };
 
 /* ══════════════════════════════════════════════════════════ */
-export default function ManagerTransactionDetail() {
+export default function AccountantTransactionDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
@@ -55,20 +54,6 @@ export default function ManagerTransactionDetail() {
     });
     return unsub;
   }, [id]);
-
-  const handleDelete = () => {
-    Alert.alert("Delete Transaction", "Are you sure you want to delete this transaction?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await deleteDoc(doc(db, "transactions", id));
-          router.back();
-        },
-      },
-    ]);
-  };
 
   if (loading) {
     return (
@@ -111,25 +96,8 @@ export default function ManagerTransactionDetail() {
         >
           <Ionicons name="arrow-back" size={22} color="#111827" />
         </Pressable>
-
         <Text style={styles.topBarTitle}>Transaction Detail</Text>
-
-        <View style={styles.topBarActions}>
-          <Pressable
-            style={styles.actionBtn}
-            onPress={() => router.push(`/manager/editTransaction?id=${id}`)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="create-outline" size={20} color="#2563eb" />
-          </Pressable>
-          <Pressable
-            style={[styles.actionBtn, styles.actionBtnDanger]}
-            onPress={handleDelete}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="trash-outline" size={20} color="#dc2626" />
-          </Pressable>
-        </View>
+        <View style={{ width: 38 }} />
       </View>
 
       <ScrollView
@@ -287,13 +255,6 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
   },
   topBarTitle: { fontSize: 17, fontWeight: "700", color: "#111827" },
-  topBarActions: { flexDirection: "row", gap: 8 },
-  actionBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: "#eff6ff",
-    justifyContent: "center", alignItems: "center",
-  },
-  actionBtnDanger: { backgroundColor: "#fef2f2" },
 
   scroll: { flex: 1 },
   scrollContent: { padding: 16 },
