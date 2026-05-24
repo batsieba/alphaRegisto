@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../config/firebase";
+import { useAuth } from "../../context/AuthContext";
 import { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -42,6 +43,7 @@ const TYPE_COLORS = {
 export default function SalespersonTransactionDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -91,13 +93,23 @@ export default function SalespersonTransactionDetail() {
       <View style={styles.topBar}>
         <Pressable
           style={styles.backBtn}
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace("/notifications")}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="arrow-back" size={22} color="#111827" />
         </Pressable>
         <Text style={styles.topBarTitle}>Transaction Detail</Text>
-        <View style={{ width: 38 }} />
+        {data?.enteredBy === user?.uid ? (
+          <Pressable
+            style={styles.editBtn}
+            onPress={() => router.push(`/salesperson/editTransaction?id=${id}`)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="create-outline" size={20} color="#2563eb" />
+          </Pressable>
+        ) : (
+          <View style={{ width: 38 }} />
+        )}
       </View>
 
       <ScrollView
@@ -255,6 +267,11 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
   },
   topBarTitle: { fontSize: 17, fontWeight: "700", color: "#111827" },
+  editBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: "#eff6ff",
+    justifyContent: "center", alignItems: "center",
+  },
 
   scroll: { flex: 1 },
   scrollContent: { padding: 16 },

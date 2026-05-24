@@ -56,6 +56,12 @@ export default function SalesLayout() {
                     }} />
 
       <Tabs.Screen
+                    name="editTransaction"
+                    options={{
+                        href: null,
+                    }} />
+
+      <Tabs.Screen
                     name="transaction-details"
                     options={{
                         href: null,

@@ -1,6 +1,7 @@
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
+const axios = require("axios");
 
 admin.initializeApp();
 
@@ -14,6 +15,157 @@ const transporter = nodemailer.createTransport({
     pass: "idkynamucnqwcvhp",
   },
 });
+
+/* ========= WHATSAPP CONFIG ========= */
+const WA_PHONE_ID = "1149455611576079";
+const WA_TOKEN = "EAAULIDF1fZC8BRkL6vGillZBvjs2RqbKbbGJQ4eoWQcDfu3H9CEDe2w8Q8cCpZAgjHJ0gjxIORD2NEPpZC0kNkQjC3Am6UHJksFAzFGIpQk0qyo1ZCZAvQ8ZAmwC05paL7DnQISKAmBA58l4Tl8GKdRXtkd6Uzzp2uoQrg3u66qykOgYaRIBMZAW2VO5rhFz12cBt0VcdiY2dDevIEZCRO1zmHzG8fObSwMALKLLb";
+
+const sendWhatsApp = async (phoneNumber, customerName, amount, currency) => {
+  const to = String(phoneNumber).replace(/\D/g, "");
+  if (!to) return;
+  try {
+    await axios.post(
+        `https://graph.facebook.com/v20.0/${WA_PHONE_ID}/messages`,
+        {
+          messaging_product: "whatsapp",
+          to,
+          type: "template",
+          template: {
+            name: "transactional",
+            language: {code: "en"},
+            components: [
+              {
+                type: "body",
+                parameters: [
+                  {type: "text", text: customerName || "N/A"},
+                  {type: "text", text: String(amount || 0)},
+                  {type: "text", text: currency || "USD"},
+                ],
+              },
+            ],
+          },
+        },
+        {
+          headers: {
+            "Authorization": "Bearer " + WA_TOKEN,
+            "Content-Type": "application/json",
+          },
+        },
+    );
+  } catch (err) {
+    console.error(
+        "WhatsApp failed for", phoneNumber, ":",
+        err.response?.data || err.message,
+    );
+  }
+};
+
+/* ========= TRIGGER: transaction updated ========= */
+exports.onTransactionUpdated = functions.firestore
+    .document("transactions/{transactionId}")
+    .onUpdate(async (change, context) => {
+      const tx = change.after.data();
+      const transactionId = context.params.transactionId;
+
+      if (!tx.companyId) return null;
+
+      try {
+        const [ownersSnap, managersSnap] = await Promise.all([
+          db.collection("users")
+              .where("companyId", "==", tx.companyId)
+              .where("role", "==", "owner")
+              .get(),
+          db.collection("users")
+              .where("companyId", "==", tx.companyId)
+              .where("role", "==", "manager")
+              .get(),
+        ]);
+
+        const recipientMap = new Map();
+        ownersSnap.docs.forEach((d) =>
+          recipientMap.set(d.id, {uid: d.id, ...d.data()}),
+        );
+        managersSnap.docs.forEach((d) =>
+          recipientMap.set(d.id, {uid: d.id, ...d.data()}),
+        );
+
+        const recipients = Array.from(recipientMap.values());
+        if (recipients.length === 0) return null;
+
+        const now = admin.firestore.FieldValue.serverTimestamp();
+        const batch = db.batch();
+
+        recipients.forEach((recipient) => {
+          const ref = db.collection("notifications").doc();
+          batch.set(ref, {
+            notificationId: ref.id,
+            recipientId: recipient.uid,
+            recipientRole: recipient.role || "",
+            companyId: tx.companyId,
+            transactionId,
+            transactionNo: tx.transactionNo || "",
+            title: "Transaction Updated",
+            amount: tx.amount || 0,
+            currency: tx.currency || "USD",
+            method: tx.method || "",
+            customerName: tx.customerName || "",
+            type: "transaction",
+            isRead: false,
+            createdAt: now,
+          });
+        });
+
+        await batch.commit();
+
+        const emailPromises = recipients
+            .filter((r) => r.email)
+            .map((r) => {
+              const htmlBody =
+                "<h2 style='color:#f59e0b'>Transaction Updated</h2>" +
+                "<p>A transaction in your company has been modified.</p>" +
+                "<table style='border-collapse:collapse;width:100%'>" +
+                "<tr><td style='padding:8px;border:1px solid #e5e7eb'>" +
+                "<b>Title</b></td>" +
+                "<td style='padding:8px;border:1px solid #e5e7eb'>" +
+                (tx.title || "N/A") + "</td></tr>" +
+                "<tr><td style='padding:8px;border:1px solid #e5e7eb'>" +
+                "<b>Customer</b></td>" +
+                "<td style='padding:8px;border:1px solid #e5e7eb'>" +
+                (tx.customerName || "N/A") + "</td></tr>" +
+                "<tr><td style='padding:8px;border:1px solid #e5e7eb'>" +
+                "<b>Amount</b></td>" +
+                "<td style='padding:8px;border:1px solid #e5e7eb'>" +
+                (tx.currency || "USD") + " " +
+                (tx.amount || 0) + "</td></tr>" +
+                "</table>" +
+                "<p style='color:#6b7280;font-size:12px;margin-top:16px'>" +
+                "Alpha Registo — Transaction Management</p>";
+              return transporter
+                  .sendMail({
+                    from: "Alpha Registo <infoalpharegisto@gmail.com>",
+                    to: r.email,
+                    subject: "Transaction Updated: " + (tx.title || ""),
+                    html: htmlBody,
+                  })
+                  .catch((err) =>
+                    console.error(
+                        "Email failed for", r.email, ":", err.message,
+                    ),
+                  );
+            });
+
+        await Promise.all(emailPromises);
+
+        console.log(
+            "Update notifications sent for " + recipients.length +
+            " recipients on transaction " + transactionId,
+        );
+        return null;
+      } catch (error) {
+        console.error("onTransactionUpdated error:", error);
+        return null;
+      }
+    });
 
 /* ========= TRIGGER: new transaction created ========= */
 exports.onTransactionCreated = functions.firestore
@@ -29,7 +181,7 @@ exports.onTransactionCreated = functions.firestore
 
       try {
         /* ---- 1. Fetch recipients ---- */
-        const [ownersSnap, managersSnap] = await Promise.all([
+        const [ownersSnap, managersSnap, accountantsSnap] = await Promise.all([
           db.collection("users")
               .where("companyId", "==", tx.companyId)
               .where("role", "==", "owner")
@@ -37,6 +189,10 @@ exports.onTransactionCreated = functions.firestore
           db.collection("users")
               .where("companyId", "==", tx.companyId)
               .where("role", "==", "manager")
+              .get(),
+          db.collection("users")
+              .where("companyId", "==", tx.companyId)
+              .where("role", "==", "accountant")
               .get(),
         ]);
 
@@ -60,6 +216,9 @@ exports.onTransactionCreated = functions.firestore
           recipientMap.set(d.id, {uid: d.id, ...d.data()}),
         );
         managersSnap.docs.forEach((d) =>
+          recipientMap.set(d.id, {uid: d.id, ...d.data()}),
+        );
+        accountantsSnap.docs.forEach((d) =>
           recipientMap.set(d.id, {uid: d.id, ...d.data()}),
         );
         if (enteredByUser) {
@@ -160,9 +319,23 @@ exports.onTransactionCreated = functions.firestore
 
         await Promise.all(emailPromises);
 
+        /* ---- 5. Send WhatsApp to each recipient with a phone ---- */
+        const waRecipients = recipients.filter((r) => r.phoneNumber);
         console.log(
-            "Notifications + emails sent for " + recipients.length +
-            " recipients on transaction " + transactionId,
+            "WhatsApp: " + waRecipients.length + " of " +
+            recipients.length + " recipients have a phoneNumber.",
+        );
+
+        await Promise.all(waRecipients.map((r) => sendWhatsApp(
+            r.phoneNumber,
+            tx.customerName,
+            tx.amount,
+            tx.currency,
+        )));
+
+        console.log(
+            "Done: notifications + emails + WhatsApp for " +
+            recipients.length + " recipients on " + transactionId,
         );
         return null;
       } catch (error) {

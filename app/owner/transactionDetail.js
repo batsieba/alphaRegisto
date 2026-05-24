@@ -91,7 +91,7 @@ export default function OwnerTransactionDetail() {
       <View style={styles.topBar}>
         <Pressable
           style={styles.backBtn}
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace("/notifications")}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="arrow-back" size={22} color="#111827" />
