@@ -1,19 +1,30 @@
-import { View, Text, StyleSheet, Image, TextInput, Pressable, Alert, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  Pressable,
+  Alert,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useState } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../../config/firebase";
 import { sendPasswordResetEmail, signOut } from "firebase/auth";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function Profile() {
   const router = useRouter();
   const user = auth.currentUser;
 
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState({});
   const [name, setName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [role, setRole] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -24,7 +35,6 @@ export default function Profile() {
         setProfile(snap.data());
         setName(snap.data().name || "");
         setPhoneNumber(snap.data().phoneNumber || "");
-        setRole(snap.data().role || "");
       }
       setLoading(false);
     };
@@ -33,246 +43,265 @@ export default function Profile() {
   }, []);
 
   const handleSave = async () => {
+    setSaving(true);
     try {
-      await updateDoc(doc(db, "users", user.uid), {
-        name,
-        phoneNumber,
-        
-      });
-      Alert.alert("Success", "Profile updated");
+      await updateDoc(doc(db, "users", user.uid), { name, phoneNumber });
+      Alert.alert("Success", "Profile updated successfully.");
     } catch (e) {
       Alert.alert("Error", e.message);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleResetPassword = async () => {
     try {
       await sendPasswordResetEmail(auth, user.email);
-      Alert.alert("Email Sent", "Check your email to reset password");
+      Alert.alert("Email Sent", "Check your email to reset your password.");
     } catch (e) {
       Alert.alert("Error", e.message);
     }
   };
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.replace("/login");
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          await signOut(auth);
+          router.replace("/login");
+        },
+      },
+    ]);
   };
 
   if (loading) {
-    return <Text style={{ padding: 20 }}>Loading...</Text>;
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#2563eb" />
+        </View>
+      </SafeAreaView>
+    );
   }
 
- return (
-  <ScrollView style={styles.container}>
+  const initial = (profile.name || profile.email || "A").charAt(0).toUpperCase();
 
-    {/* HEADER */}
-    <View style={styles.header}>
-      <Image
-        source={require("../../assets/logo.png")}
-        resizeMode="contain"
-        style={styles.logo}
-      />
-      <Text style={styles.title}>Admin Profile</Text>
-    </View>
+  return (
+    <SafeAreaView style={styles.safe}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Avatar */}
+        <View style={styles.avatarSection}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initial}</Text>
+          </View>
+          <Text style={styles.profileName}>{profile.name || "Admin"}</Text>
+          <View style={styles.roleBadge}>
+            <Ionicons name="shield-checkmark-outline" size={13} color="#2563eb" />
+            <Text style={styles.roleBadgeText}>Platform Administrator</Text>
+          </View>
+        </View>
 
-    {/* PROFILE CARD */}
-    {/* <View style={styles.card}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>
-          {profile.name?.charAt(0)?.toUpperCase()}
-        </Text>
-      </View>
+        {/* Account Information */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Account Information</Text>
 
-      <Text style={styles.profileName}>{profile.name}</Text>
-      <Text style={styles.profileMeta}>{profile.role?.toUpperCase()}</Text>
-    </View> */}
+          <Text style={styles.label}>Full Name</Text>
+          <View style={styles.inputRow}>
+            <Ionicons name="person-outline" size={16} color="#9ca3af" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="Your name"
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
 
-    {/* ACCOUNT INFO */}
-    <View style={styles.card}>
-      <Text style={styles.sectionTitle}>Account Information</Text>
+          <Text style={styles.label}>Phone Number</Text>
+          <View style={styles.inputRow}>
+            <Ionicons name="call-outline" size={16} color="#9ca3af" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              placeholder="Phone number"
+              placeholderTextColor="#9ca3af"
+              keyboardType="phone-pad"
+            />
+          </View>
 
-      <Text style={styles.label}>Full Name</Text>
-      <TextInput
-        style={styles.input}
-        value={name}
-        onChangeText={setName}
-      />
+          <Text style={styles.label}>Email</Text>
+          <View style={[styles.inputRow, styles.inputRowDisabled]}>
+            <Ionicons name="mail-outline" size={16} color="#d1d5db" style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, styles.inputDisabled]}
+              value={user?.email || ""}
+              editable={false}
+            />
+          </View>
 
-      <Text style={styles.label}>Phone Number</Text>
-      <TextInput
-        style={styles.input}
-        value={phoneNumber}
-        onChangeText={setPhoneNumber}
-      />
+          <Text style={styles.label}>Role</Text>
+          <View style={[styles.inputRow, styles.inputRowDisabled]}>
+            <Ionicons name="briefcase-outline" size={16} color="#d1d5db" style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, styles.inputDisabled]}
+              value="Admin"
+              editable={false}
+            />
+          </View>
 
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={[styles.input, styles.disabled]}
-        value={user?.email || ""}
-        editable={false}
-      />
+          <Pressable
+            style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-outline" size={18} color="#fff" />
+                <Text style={styles.saveBtnText}>Save Changes</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
 
-      <Text style={styles.label}>Role</Text>
-      <TextInput
-        style={[styles.input, styles.disabled]}
-        value={profile.role}
-        editable={false}
-      />
+        {/* Security */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Security</Text>
 
-      <Pressable style={styles.primaryButton} onPress={handleSave}>
-        <Text style={styles.primaryButtonText}>Save Changes</Text>
-      </Pressable>
-    </View>
+          <Pressable style={styles.secondaryBtn} onPress={handleResetPassword}>
+            <Ionicons name="key-outline" size={18} color="#2563eb" />
+            <Text style={styles.secondaryBtnText}>Change Password</Text>
+          </Pressable>
 
-    {/* SECURITY */}
-    <View style={styles.card}>
-      <Text style={styles.sectionTitle}>Security</Text>
-
-      <Pressable style={styles.secondaryButton} onPress={handleResetPassword}>
-        <Text style={styles.secondaryText}>Change Password</Text>
-      </Pressable>
-
-      <Pressable style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </Pressable>
-    </View>
-
-  </ScrollView>
-);
+          <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={18} color="#dc2626" />
+            <Text style={styles.logoutBtnText}>Logout</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    backgroundColor: "#f3f4f6",
-  },
+  safe: { flex: 1, backgroundColor: "#f5f7fb" },
+  scroll: { flex: 1 },
+  content: { padding: 20, paddingBottom: 40 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
 
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-
-  logo: {
-    width: 90,
-    height: 90,
-    marginRight: 12,
-    borderRadius: 50,
-  },
-
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#111827",
-  },
-
-  card: {
-    backgroundColor: "#ffffff",
-    padding: 20,
-    borderRadius: 20,
-    marginBottom: 18,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-
+  avatarSection: { alignItems: "center", marginBottom: 24 },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     backgroundColor: "#2563eb",
     justifyContent: "center",
     alignItems: "center",
-    alignSelf: "center",
     marginBottom: 12,
+    shadowColor: "#2563eb",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-
-  avatarText: {
-    color: "#fff",
-    fontSize: 30,
-    fontWeight: "700",
+  avatarText: { fontSize: 34, fontWeight: "800", color: "#fff" },
+  profileName: { fontSize: 22, fontWeight: "800", color: "#111827", marginBottom: 8 },
+  roleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#eff6ff",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
   },
+  roleBadgeText: { fontSize: 12, fontWeight: "600", color: "#2563eb" },
 
-  profileName: {
-    fontSize: 18,
-    fontWeight: "700",
-    textAlign: "center",
-    color: "#111827",
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-
-  profileMeta: {
+  cardTitle: {
     fontSize: 13,
+    fontWeight: "700",
     color: "#6b7280",
-    textAlign: "center",
-    marginTop: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 16,
   },
 
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 14,
-    color: "#111827",
-  },
-
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 6,
-    color: "#374151",
-  },
-
-  input: {
+  label: { fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 7 },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
     marginBottom: 14,
     backgroundColor: "#fff",
   },
+  inputRowDisabled: { backgroundColor: "#f9fafb" },
+  inputIcon: { marginRight: 10 },
+  input: { flex: 1, fontSize: 15, color: "#111827" },
+  inputDisabled: { color: "#9ca3af" },
 
-  disabled: {
-    backgroundColor: "#f3f4f6",
-  },
-
-  primaryButton: {
-    backgroundColor: "#111827",
-    paddingVertical: 14,
-    borderRadius: 14,
+  saveBtn: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#2563eb",
+    borderRadius: 12,
+    height: 48,
     marginTop: 4,
   },
+  saveBtnDisabled: { opacity: 0.6 },
+  saveBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
 
-  primaryButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-
-  secondaryButton: {
-    backgroundColor: "#2563eb",
-    paddingVertical: 14,
-    borderRadius: 14,
+  secondaryBtn: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#eff6ff",
+    borderRadius: 12,
+    height: 48,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
   },
+  secondaryBtnText: { fontSize: 15, fontWeight: "600", color: "#2563eb" },
 
-  secondaryText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-
-  logoutButton: {
-    backgroundColor: "#dc2626",
-    paddingVertical: 14,
-    borderRadius: 14,
+  logoutBtn: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#fef2f2",
+    borderRadius: 12,
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#fecaca",
   },
-
-  logoutText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
+  logoutBtnText: { fontSize: 15, fontWeight: "600", color: "#dc2626" },
 });
